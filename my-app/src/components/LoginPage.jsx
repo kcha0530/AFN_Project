@@ -76,9 +76,9 @@ function LoginPage({ onLoginSuccess }) {
       {message && <p className="success">{message}</p>}
       {error && <p className="error">{error}</p>}
 
-      <div className="login-hint">
+      {/* <div className="login-hint">
         <p>Use credentials: <strong>krit</strong> / <strong>krit</strong></p>
-      </div>
+      </div> */}
     </div>
   );
 }
