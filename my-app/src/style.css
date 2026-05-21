@@ -110,6 +110,44 @@ body {
   margin-bottom: 12px;
 }
 
+.dashboard-welcome {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  color: white;
+  border: none;
+}
+
+.dashboard-welcome p {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.nav-button {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.status-message {
+  margin-top: 18px;
+  color: #334155;
+}
+
+.login-info-card ul {
+  padding-left: 20px;
+  margin-top: 16px;
+}
+
+.login-info-card li {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 620px) {
+  .site-header,
+  .site-footer,
+  .hero,
+  .card {
+    padding: 20px;
+  }
+}
+
 .card-subtitle {
   color: #64748b;
   margin-top: 0;

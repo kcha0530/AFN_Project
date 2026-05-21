@@ -1,34 +1,65 @@
+import { useState } from "react";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
 import LoginPage from "./components/LoginPage.jsx";
-import BackendProducts from "./components/BackendProducts.jsx";
-import GitHubProfile from "./components/GitHubProfile.jsx";
-import RandomJoke from "./components/RandomJoke.jsx";
+import Dashboard from "./components/Dashboard.jsx";
 
 function App() {
+  const [userName, setUserName] = useState(localStorage.getItem("username") || "");
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("authToken"));
+  const [statusMessage, setStatusMessage] = useState("");
+
+  function handleLoginSuccess(username) {
+    setUserName(username);
+    setIsAuthenticated(true);
+    setStatusMessage("");
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("username");
+    setIsAuthenticated(false);
+    setUserName("");
+    setStatusMessage("You have been logged out. Please sign in again to access the dashboard.");
+  }
+
   return (
     <div className="app">
-      <Header />
+      <Header isLoggedIn={isAuthenticated} onLogout={handleLogout} />
 
       <section className="hero">
         <div>
-          <p className="eyebrow">Secure Web App</p>
-          <h1>React + ASP.NET Core with JWT Auth</h1>
+          <p className="eyebrow">{isAuthenticated ? "Welcome back" : "Secure login required"}</p>
+          <h1>{isAuthenticated ? `Hello, ${userName}!` : "Please login to access the dashboard"}</h1>
           <p className="lead">
-            Modern UI, clean structure, and secure API access using JWT, CORS, and rate limiting.
+            {isAuthenticated
+              ? "You now have access to the protected frontend dashboard components and secure backend products."
+              : "Login first with your credentials to continue. Unauthorized visitors cannot access the dashboard."}
           </p>
+          {statusMessage && <p className="status-message">{statusMessage}</p>}
         </div>
       </section>
 
-      <section className="grid two-column" id="login">
-        <LoginPage />
-        <BackendProducts />
-      </section>
-
-      <section className="grid two-column">
-        <GitHubProfile />
-        <RandomJoke />
-      </section>
+      {isAuthenticated ? (
+        <Dashboard userName={userName} />
+      ) : (
+        <section className="grid two-column" id="login">
+          <LoginPage onLoginSuccess={handleLoginSuccess} />
+          <div className="card login-info-card">
+            <h2>Login First</h2>
+            <p>After you sign in, the secure dashboard opens with these build tasks:</p>
+            <ul>
+              <li>Counter component with +, - and Reset</li>
+              <li>Toggle component with dynamic text</li>
+              <li>List builder with input and add button</li>
+              <li>Like button with a heart icon and count</li>
+              <li>GitHub profile card</li>
+              <li>Random joke generator</li>
+              <li>Protected backend products</li>
+            </ul>
+          </div>
+        </section>
+      )}
 
       <Footer />
     </div>

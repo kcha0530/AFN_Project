@@ -206,13 +206,13 @@ app.MapPost("/login", (UserLogin login) =>
         return Results.BadRequest(new { error = "Username and password are required." });
     }
 
-    if (login.Username != "admin" || login.Password != "P@ssw0rd")
+    if (login.Username != "krit" || login.Password != "krit")
     {
         return Results.Unauthorized();
     }
 
     var token = CreateJwtToken(login.Username, jwtSettings);
-    return Results.Ok(new { token });
+    return Results.Ok(new { token, username = login.Username });
 });
 
 app.MapGet("/secure", [Authorize] () => Results.Ok(new { message = "Protected Route Accessed" }));

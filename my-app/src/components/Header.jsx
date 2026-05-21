@@ -1,4 +1,4 @@
-function Header() {
+function Header({ isLoggedIn, onLogout }) {
   return (
     <header className="site-header">
       <div>
@@ -6,8 +6,16 @@ function Header() {
         <p className="logo-tag">Clean, secure React + ASP.NET demo</p>
       </div>
       <nav>
-        <a href="#login">Login</a>
-        <a href="#backend-products">Products</a>
+        {isLoggedIn ? (
+          <>
+            <a href="#dashboard">Dashboard</a>
+            <button type="button" className="nav-button outline" onClick={onLogout}>
+              Logout
+            </button>
+          </>
+        ) : (
+          <a href="#login">Login</a>
+        )}
       </nav>
     </header>
   );
