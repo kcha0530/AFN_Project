@@ -1,40 +1,33 @@
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
-import Profile from "./components/Profile.jsx";
-import Card from "./components/Card.jsx";
-
-import Counter from "./components/Counter.jsx";
-import ToggleText from "./components/ToggleText.jsx";
-import ItemList from "./components/ItemList.jsx";
-import LoginUI from "./components/LoginUI.jsx";
-import LikeButton from "./components/LikeButton.jsx";
-
+import LoginPage from "./components/LoginPage.jsx";
+import BackendProducts from "./components/BackendProducts.jsx";
 import GitHubProfile from "./components/GitHubProfile.jsx";
 import RandomJoke from "./components/RandomJoke.jsx";
-import BackendProducts from "./components/BackendProducts.jsx";
 
 function App() {
   return (
     <div className="app">
-      <section>
-        <Header />
-        <Profile />
-        <Card />
+      <Header />
+
+      <section className="hero">
+        <div>
+          <p className="eyebrow">Secure Web App</p>
+          <h1>React + ASP.NET Core with JWT Auth</h1>
+          <p className="lead">
+            Modern UI, clean structure, and secure API access using JWT, CORS, and rate limiting.
+          </p>
+        </div>
       </section>
 
-      <section>
-        <h1></h1>
-        <Counter />
-        <ToggleText />
-        <ItemList />
-        <LoginUI />
-        <LikeButton />
+      <section className="grid two-column" id="login">
+        <LoginPage />
+        <BackendProducts />
       </section>
 
-      <section>
+      <section className="grid two-column">
         <GitHubProfile />
         <RandomJoke />
-        <BackendProducts />
       </section>
 
       <Footer />

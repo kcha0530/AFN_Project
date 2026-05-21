@@ -51,7 +51,7 @@ public class HeaderValidationMiddleware
     {
         var path = context.Request.Path;
 
-        if (path == "/" || path == "/hello" || path == "/login" || path.StartsWithSegments("/swagger"))
+        if (path == "/" || path == "/hello" || path == "/login" || path.StartsWithSegments("/swagger") || path.StartsWithSegments("/swagger-ui"))
         {
             await _next(context);
             return;

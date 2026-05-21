@@ -1,12 +1,16 @@
+using backenddemo.ApiService.Data;
 using backenddemo.ApiService.Middleware;
 using backenddemo.ApiService.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +27,11 @@ builder.Services.AddSingleton(jwtSettings);
 
 var dbConnectionString = builder.Configuration.GetConnectionString("Default") ?? string.Empty;
 Console.WriteLine($"DB Connection string: {dbConnectionString}");
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseInMemoryDatabase("DemoDb");
+});
 
 var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key));
 
@@ -49,6 +58,27 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(clientIp, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new { error = "Too many requests. Please try again later." }, cancellationToken: token);
+    };
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -63,6 +93,19 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    if (!db.Products.Any())
+    {
+        db.Products.AddRange(
+            new Product(1, "Keyboard", 50),
+            new Product(2, "Mouse", 30)
+        );
+        db.SaveChanges();
+    }
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
@@ -73,6 +116,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("AllowFrontend");
 app.UseSecurityHeaders();
+app.UseRateLimiter();
 app.UseRequestLogging();
 app.UseRequestTiming();
 app.UseHeaderValidation();
@@ -106,56 +150,54 @@ app.UseStatusCodePages(async context =>
     }
 });
 
-var products = new List<Product>
-{
-    new Product(1, "Keyboard", 50),
-    new Product(2, "Mouse", 30)
-};
-
 app.MapGet("/", () => Results.Json(new { message = "Backend Running" }));
 
 app.MapGet("/hello", () => Results.Json(new { message = "Hello Interns" }));
 
-app.MapGet("/products", () => Results.Json(products));
+app.MapGet("/products", async (ApplicationDbContext db) => Results.Json(await db.Products.ToListAsync()));
 
-app.MapGet("/products/{id}", (int id) =>
+app.MapGet("/products/{id}", async (int id, ApplicationDbContext db) =>
 {
-    var product = products.FirstOrDefault(p => p.Id == id);
+    var product = await db.Products.FindAsync(id);
     return product is null
         ? Results.NotFound(new { message = "Product not found" })
         : Results.Json(product);
 });
 
-app.MapPost("/products", (Product product) =>
+app.MapPost("/products", async (Product product, ApplicationDbContext db) =>
 {
-    products.Add(product);
+    db.Products.Add(product);
+    await db.SaveChangesAsync();
     return Results.Created($"/products/{product.Id}", product);
 });
 
-app.MapDelete("/products/{id}", (int id) =>
+app.MapDelete("/products/{id}", async (int id, ApplicationDbContext db) =>
 {
-    var product = products.FirstOrDefault(p => p.Id == id);
+    var product = await db.Products.FindAsync(id);
     if (product is null)
     {
         return Results.NotFound(new { message = "Product not found" });
     }
 
-    products.Remove(product);
+    db.Products.Remove(product);
+    await db.SaveChangesAsync();
     return Results.Ok(new { message = "Product deleted" });
 });
 
-app.MapPut("/products/{id}", (int id, Product updatedProduct) =>
+app.MapPut("/products/{id}", async (int id, Product updatedProduct, ApplicationDbContext db) =>
 {
-    var product = products.FirstOrDefault(p => p.Id == id);
+    var product = await db.Products.FindAsync(id);
     if (product is null)
     {
         return Results.NotFound(new { message = "Product not found" });
     }
 
-    products.Remove(product);
-    products.Add(updatedProduct);
+    db.Entry(product).CurrentValues.SetValues(updatedProduct);
+    await db.SaveChangesAsync();
     return Results.Ok(updatedProduct);
 });
+
+app.MapGet("/login", () => Results.Json(new { message = "Send POST /login with username and password." }));
 
 app.MapPost("/login", (UserLogin login) =>
 {
@@ -173,14 +215,11 @@ app.MapPost("/login", (UserLogin login) =>
     return Results.Ok(new { token });
 });
 
-app.MapGet("/secure", SecureRoute);
+app.MapGet("/secure", [Authorize] () => Results.Ok(new { message = "Protected Route Accessed" }));
 
 app.MapFallback(() => Results.NotFound(new { error = "Route not found" }));
 
 app.Run();
-
-[Authorize]
-static IResult SecureRoute() => Results.Ok(new { message = "Protected Route Accessed" });
 
 static string CreateJwtToken(string username, JwtSettings jwtSettings)
 {
