@@ -25,12 +25,12 @@ var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? 
 
 builder.Services.AddSingleton(jwtSettings);
 
-var dbConnectionString = builder.Configuration.GetConnectionString("Default") ?? string.Empty;
+var dbConnectionString = builder.Configuration.GetConnectionString("demodb") ?? string.Empty;
 Console.WriteLine($"DB Connection string: {dbConnectionString}");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseInMemoryDatabase("DemoDb");
+    options.UseNpgsql(dbConnectionString);
 });
 
 var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key));
@@ -93,15 +93,38 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Run EF Core migrations and seed data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    
+    // Apply migrations
+    db.Database.Migrate();
+    
+    // Seed products
     if (!db.Products.Any())
     {
         db.Products.AddRange(
             new Product(1, "Keyboard", 50),
-            new Product(2, "Mouse", 30)
+            new Product(2, "Mouse", 30),
+            new Product(3, "Monitor 27\"", 299),
+            new Product(4, "USB-C Hub", 45)
         );
+        db.SaveChanges();
+    }
+    
+    // Seed test user
+    if (!db.Users.Any())
+    {
+        var hashedPassword = BCrypt.Net.BCrypt.HashPassword("krit");
+        db.Users.Add(new User
+        {
+            Username = "krit",
+            Email = "krit@demo.com",
+            FullName = "Krit Chaiyabud",
+            PasswordHash = hashedPassword,
+            IsActive = true
+        });
         db.SaveChanges();
     }
 }
@@ -152,9 +175,121 @@ app.UseStatusCodePages(async context =>
 
 app.MapGet("/", () => Results.Json(new { message = "Backend Running" }));
 
-app.MapGet("/hello", () => Results.Json(new { message = "Hello Interns" }));
+app.MapGet("/health", async (ApplicationDbContext db) =>
+{
+    var userCount = await db.Users.CountAsync();
+    var productCount = await db.Products.CountAsync();
+    return Results.Json(new ApiHealthDto(
+        Status: "Healthy",
+        Version: "1.0.0",
+        Timestamp: DateTime.UtcNow,
+        Database: "PostgreSQL"
+    ));
+});
 
-app.MapGet("/products", async (ApplicationDbContext db) => Results.Json(await db.Products.ToListAsync()));
+// ============ AUTHENTICATION ENDPOINTS ============
+
+app.MapPost("/auth/register", async (UserRegisterRequest request, ApplicationDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password) || string.IsNullOrWhiteSpace(request.Email))
+    {
+        return Results.BadRequest(new { error = "Username, email, and password are required." });
+    }
+
+    var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Username == request.Username || u.Email == request.Email);
+    if (existingUser != null)
+    {
+        return Results.BadRequest(new { error = "Username or email already exists." });
+    }
+
+    var hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
+    var newUser = new User
+    {
+        Username = request.Username,
+        Email = request.Email,
+        FullName = request.FullName,
+        PasswordHash = hashedPassword,
+        IsActive = true
+    };
+
+    db.Users.Add(newUser);
+    await db.SaveChangesAsync();
+
+    var userDto = new UserDto(newUser.Id, newUser.Username, newUser.Email, newUser.FullName, newUser.CreatedAt);
+    return Results.Created($"/users/{newUser.Id}", userDto);
+});
+
+app.MapPost("/auth/login", async (UserLogin login, ApplicationDbContext db) =>
+{
+    if (login is null || string.IsNullOrWhiteSpace(login.Username) || string.IsNullOrWhiteSpace(login.Password))
+    {
+        return Results.BadRequest(new { error = "Username and password are required." });
+    }
+
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == login.Username);
+    if (user == null || !BCrypt.Net.BCrypt.Verify(login.Password, user.PasswordHash))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!user.IsActive)
+    {
+        return Results.Unauthorized(new { error = "User account is inactive." });
+    }
+
+    var token = CreateJwtToken(user.Username, user.Id.ToString(), jwtSettings);
+    return Results.Ok(new { token, username = user.Username, userId = user.Id, email = user.Email });
+});
+
+// ============ USER ENDPOINTS ============
+
+app.MapGet("/users/{id}", [Authorize] async (int id, ApplicationDbContext db) =>
+{
+    var user = await db.Users.FindAsync(id);
+    if (user == null)
+    {
+        return Results.NotFound(new { error = "User not found" });
+    }
+
+    var userDto = new UserDto(user.Id, user.Username, user.Email, user.FullName, user.CreatedAt);
+    return Results.Json(userDto);
+});
+
+app.MapGet("/users", [Authorize] async (ApplicationDbContext db) =>
+{
+    var users = await db.Users
+        .Where(u => u.IsActive)
+        .Select(u => new UserDto(u.Id, u.Username, u.Email, u.FullName, u.CreatedAt))
+        .ToListAsync();
+    return Results.Json(users);
+});
+
+app.MapPut("/users/{id}", [Authorize] async (int id, UserProfileUpdateRequest request, ApplicationDbContext db) =>
+{
+    var user = await db.Users.FindAsync(id);
+    if (user == null)
+    {
+        return Results.NotFound(new { error = "User not found" });
+    }
+
+    user.Email = request.Email ?? user.Email;
+    user.FullName = request.FullName ?? user.FullName;
+    user.UpdatedAt = DateTime.UtcNow;
+
+    db.Users.Update(user);
+    await db.SaveChangesAsync();
+
+    var userDto = new UserDto(user.Id, user.Username, user.Email, user.FullName, user.CreatedAt);
+    return Results.Json(userDto);
+});
+
+// ============ PRODUCT ENDPOINTS ============
+
+app.MapGet("/products", async (ApplicationDbContext db) =>
+{
+    var products = await db.Products.ToListAsync();
+    return Results.Json(products);
+});
 
 app.MapGet("/products/{id}", async (int id, ApplicationDbContext db) =>
 {
@@ -164,27 +299,14 @@ app.MapGet("/products/{id}", async (int id, ApplicationDbContext db) =>
         : Results.Json(product);
 });
 
-app.MapPost("/products", async (Product product, ApplicationDbContext db) =>
+app.MapPost("/products", [Authorize] async (Product product, ApplicationDbContext db) =>
 {
     db.Products.Add(product);
     await db.SaveChangesAsync();
     return Results.Created($"/products/{product.Id}", product);
 });
 
-app.MapDelete("/products/{id}", async (int id, ApplicationDbContext db) =>
-{
-    var product = await db.Products.FindAsync(id);
-    if (product is null)
-    {
-        return Results.NotFound(new { message = "Product not found" });
-    }
-
-    db.Products.Remove(product);
-    await db.SaveChangesAsync();
-    return Results.Ok(new { message = "Product deleted" });
-});
-
-app.MapPut("/products/{id}", async (int id, Product updatedProduct, ApplicationDbContext db) =>
+app.MapPut("/products/{id}", [Authorize] async (int id, Product updatedProduct, ApplicationDbContext db) =>
 {
     var product = await db.Products.FindAsync(id);
     if (product is null)
@@ -197,23 +319,38 @@ app.MapPut("/products/{id}", async (int id, Product updatedProduct, ApplicationD
     return Results.Ok(updatedProduct);
 });
 
-app.MapGet("/login", () => Results.Json(new { message = "Send POST /login with username and password." }));
-
-app.MapPost("/login", (UserLogin login) =>
+app.MapDelete("/products/{id}", [Authorize] async (int id, ApplicationDbContext db) =>
 {
-    if (login is null || string.IsNullOrWhiteSpace(login.Username) || string.IsNullOrWhiteSpace(login.Password))
+    var product = await db.Products.FindAsync(id);
+    if (product is null)
     {
-        return Results.BadRequest(new { error = "Username and password are required." });
+        return Results.NotFound(new { message = "Product not found" });
     }
 
-    if (login.Username != "krit" || login.Password != "krit")
-    {
-        return Results.Unauthorized();
-    }
-
-    var token = CreateJwtToken(login.Username, jwtSettings);
-    return Results.Ok(new { token, username = login.Username });
+    db.Products.Remove(product);
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = "Product deleted" });
 });
+
+// ============ DASHBOARD ENDPOINTS ============
+
+app.MapGet("/dashboard/stats", [Authorize] async (ApplicationDbContext db) =>
+{
+    var totalUsers = await db.Users.CountAsync();
+    var activeUsers = await db.Users.Where(u => u.IsActive).CountAsync();
+    var totalProducts = await db.Products.CountAsync();
+
+    return Results.Json(new DashboardStatsDto(
+        TotalUsers: totalUsers,
+        TotalProducts: totalProducts,
+        ActiveUsers: activeUsers,
+        LastUpdated: DateTime.UtcNow
+    ));
+});
+
+// ============ TEST/SECURE ENDPOINTS ============
+
+app.MapGet("/hello", () => Results.Json(new { message = "Hello Interns" }));
 
 app.MapGet("/secure", [Authorize] () => Results.Ok(new { message = "Protected Route Accessed" }));
 
@@ -221,11 +358,12 @@ app.MapFallback(() => Results.NotFound(new { error = "Route not found" }));
 
 app.Run();
 
-static string CreateJwtToken(string username, JwtSettings jwtSettings)
+static string CreateJwtToken(string username, string userId, JwtSettings jwtSettings)
 {
     var claims = new List<Claim>
     {
         new Claim(JwtRegisteredClaimNames.Sub, username),
+        new Claim("UserId", userId),
         new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
     };
 

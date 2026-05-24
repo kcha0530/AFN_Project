@@ -16,7 +16,7 @@ function LoginPage({ onLoginSuccess }) {
     setMessage("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -31,6 +31,8 @@ function LoginPage({ onLoginSuccess }) {
 
       localStorage.setItem("authToken", data.token);
       localStorage.setItem("username", data.username || username);
+      localStorage.setItem("userId", data.userId);
+      localStorage.setItem("email", data.email);
       setMessage("Login successful. Redirecting to dashboard...");
       setUsername("");
       setPassword("");
@@ -76,9 +78,11 @@ function LoginPage({ onLoginSuccess }) {
       {message && <p className="success">{message}</p>}
       {error && <p className="error">{error}</p>}
 
-      {/* <div className="login-hint">
-        <p>Use credentials: <strong>krit</strong> / <strong>krit</strong></p>
-      </div> */}
+      <div className="login-hint">
+        <p>Demo credentials:</p>
+        <p><strong>Username:</strong> krit</p>
+        <p><strong>Password:</strong> krit</p>
+      </div>
     </div>
   );
 }
