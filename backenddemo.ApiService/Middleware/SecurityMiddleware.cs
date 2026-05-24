@@ -4,95 +4,85 @@ using System.Diagnostics;
 
 namespace backenddemo.ApiService.Middleware;
 
-public class RequestLoggingMiddleware
+// ── Logging Middleware ───────────────────────────────────────────────────────
+public class RequestLoggingMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public RequestLoggingMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
-        Console.WriteLine($"[Request] {context.Request.Method} {context.Request.Path}");
-        await _next(context);
+        Console.WriteLine($"[{DateTime.UtcNow:HH:mm:ss}] {context.Request.Method} {context.Request.Path}");
+        await next(context);
+        Console.WriteLine($"[{DateTime.UtcNow:HH:mm:ss}] {context.Request.Method} {context.Request.Path} → {context.Response.StatusCode}");
     }
 }
 
-public class RequestTimingMiddleware
+// ── Timing Middleware ────────────────────────────────────────────────────────
+public class RequestTimingMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public RequestTimingMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
-        var stopwatch = Stopwatch.StartNew();
-        await _next(context);
-        stopwatch.Stop();
-        Console.WriteLine($"[Timing] {context.Request.Method} {context.Request.Path} completed in {stopwatch.ElapsedMilliseconds} ms");
+        var sw = Stopwatch.StartNew();
+        await next(context);
+        sw.Stop();
+        Console.WriteLine($"[Timing] {context.Request.Method} {context.Request.Path} completed in {sw.ElapsedMilliseconds} ms");
     }
 }
 
-public class HeaderValidationMiddleware
+// ── Header Validation Middleware ─────────────────────────────────────────────
+// Validates that POST/PUT/PATCH requests include Content-Type: application/json
+public class HeaderValidationMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public HeaderValidationMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
+    private static readonly string[] _writeMethods = ["POST", "PUT", "PATCH"];
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var path = context.Request.Path;
+        var method = context.Request.Method.ToUpperInvariant();
 
-        if (path == "/" || path == "/hello" || path == "/login" || path.StartsWithSegments("/swagger") || path.StartsWithSegments("/swagger-ui"))
+        if (_writeMethods.Contains(method)
+            && context.Request.ContentLength > 0
+            && !context.Request.Path.StartsWithSegments("/swagger"))
         {
-            await _next(context);
-            return;
+            var contentType = context.Request.ContentType ?? string.Empty;
+            if (!contentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.StatusCode = StatusCodes.Status415UnsupportedMediaType;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    error = "Content-Type must be application/json for write operations.",
+                    status = 415
+                });
+                return;
+            }
         }
 
-        if (!context.Request.Headers.ContainsKey("x-api-key"))
-        {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsJsonAsync(new { error = "API Key Missing" });
-            return;
-        }
-
-        await _next(context);
+        await next(context);
     }
 }
 
-public class SecurityHeadersMiddleware
+// ── Security Headers Middleware ──────────────────────────────────────────────
+public class SecurityHeadersMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public SecurityHeadersMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
         context.Response.Headers["X-Content-Type-Options"] = "nosniff";
         context.Response.Headers["X-Frame-Options"] = "DENY";
         context.Response.Headers["Referrer-Policy"] = "no-referrer";
         context.Response.Headers["Permissions-Policy"] = "geolocation=(), microphone=()";
-        context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
-
-        await _next(context);
+        await next(context);
     }
 }
 
+// ── Extension Methods ────────────────────────────────────────────────────────
 public static class MiddlewareExtensions
 {
-    public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder builder) => builder.UseMiddleware<RequestLoggingMiddleware>();
-    public static IApplicationBuilder UseRequestTiming(this IApplicationBuilder builder) => builder.UseMiddleware<RequestTimingMiddleware>();
-    public static IApplicationBuilder UseHeaderValidation(this IApplicationBuilder builder) => builder.UseMiddleware<HeaderValidationMiddleware>();
-    public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder builder) => builder.UseMiddleware<SecurityHeadersMiddleware>();
+    public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder b) =>
+        b.UseMiddleware<RequestLoggingMiddleware>();
+
+    public static IApplicationBuilder UseRequestTiming(this IApplicationBuilder b) =>
+        b.UseMiddleware<RequestTimingMiddleware>();
+
+    public static IApplicationBuilder UseHeaderValidation(this IApplicationBuilder b) =>
+        b.UseMiddleware<HeaderValidationMiddleware>();
+
+    public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder b) =>
+        b.UseMiddleware<SecurityHeadersMiddleware>();
 }

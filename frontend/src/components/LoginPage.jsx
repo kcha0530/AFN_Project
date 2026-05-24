@@ -15,12 +15,24 @@ function LoginPage({ onLoginSuccess }) {
     setError("");
     setMessage("");
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
+      if (response.status === 429) {
+        throw new Error("Too many requests. Please wait a moment and try again.");
+      }
+      if (response.status === 401) {
+        throw new Error("Invalid username or password.");
+      }
 
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Login failed");
@@ -35,7 +47,12 @@ function LoginPage({ onLoginSuccess }) {
       setPassword("");
       onLoginSuccess?.(data.username || username, data.token);
     } catch (err) {
-      setError(err.message || "Unable to login. Please try again.");
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        setError("Connection timed out. Check that the server is running and try again.");
+      } else {
+        setError(err.message || "Unable to login. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

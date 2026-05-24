@@ -14,6 +14,7 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
 builder.Configuration.AddEnvironmentVariables();
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings(
@@ -101,10 +102,21 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    
-    // Apply migrations
-    db.Database.Migrate();
-    
+
+    for (var attempt = 1; attempt <= 5; attempt++)
+    {
+        try
+        {
+            db.Database.Migrate();
+            break;
+        }
+        catch (Exception ex) when (attempt < 5)
+        {
+            Console.Error.WriteLine($"[Startup] Migration attempt {attempt}/5 failed: {ex.Message}. Retrying in 3 s...");
+            Thread.Sleep(3000);
+        }
+    }
+
     // Seed products
     if (!db.Products.Any())
     {
@@ -133,23 +145,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-    app.UseHttpsRedirection();
-}
-
-app.UseSwagger();
-app.UseSwaggerUI();
-app.UseCors("AllowFrontend");
-app.UseSecurityHeaders();
-app.UseRateLimiter();
-app.UseRequestLogging();
-app.UseRequestTiming();
-app.UseHeaderValidation();
-app.UseAuthentication();
-app.UseAuthorization();
-
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
@@ -176,6 +171,23 @@ app.UseStatusCodePages(async context =>
         });
     }
 });
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
+app.UseSwagger();
+app.UseSwaggerUI();
+app.UseCors("AllowFrontend");
+app.UseSecurityHeaders();
+app.UseRateLimiter();
+app.UseRequestLogging();
+app.UseRequestTiming();
+app.UseHeaderValidation();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/", () => Results.Json(new { message = "Backend Running" }));
 
@@ -447,6 +459,8 @@ app.MapGet("/hello", () => Results.Json(new { message = "Hello Interns" }));
 app.MapGet("/secure", [Authorize] () => Results.Ok(new { message = "Protected Route Accessed" }));
 
 app.MapFallback(() => Results.NotFound(new { error = "Route not found" }));
+
+app.MapDefaultEndpoints();
 
 app.Run();
 
