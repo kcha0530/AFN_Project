@@ -11,10 +11,8 @@ function ProductSearch() {
   async function handleSearch(e) {
     e.preventDefault();
     if (!query.trim()) return;
-
     setLoading(true);
     setSearched(true);
-
     try {
       const res = await fetch(
         `${API_BASE_URL}/products/search?q=${encodeURIComponent(query.trim())}`
@@ -31,21 +29,20 @@ function ProductSearch() {
   return (
     <div className="card">
       <h2>Product Search</h2>
-      <p className="card-subtitle">Search products from the database.</p>
+      <p className="card-subtitle">Search products by name in real time.</p>
 
-      <form onSubmit={handleSearch} className="login-form">
-        <label>
-          Search
+      <form onSubmit={handleSearch}>
+        <div className="search-row">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. Keyboard, Mouse..."
+            placeholder="e.g. Keyboard, Mouse…"
           />
-        </label>
-        <button type="submit" disabled={loading}>
-          {loading ? "Searching..." : "Search"}
-        </button>
+          <button type="submit" disabled={loading}>
+            {loading ? "…" : "Search"}
+          </button>
+        </div>
       </form>
 
       {searched && !loading && (
@@ -53,12 +50,13 @@ function ProductSearch() {
           <ul className="product-list">
             {results.map((p) => (
               <li key={p.id}>
-                <strong>{p.name}</strong> — ${p.price}
+                <span className="p-name">{p.name}</span>
+                <span className="p-price">${p.price}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="error">No products found for &quot;{query}&quot;</p>
+          <div className="alert alert-info">No products found for &quot;{query}&quot;</div>
         )
       )}
     </div>

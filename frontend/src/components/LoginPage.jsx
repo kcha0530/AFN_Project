@@ -18,70 +18,90 @@ function LoginPage({ onLoginSuccess }) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.error || "Login failed");
-      }
+      if (!response.ok) throw new Error(data?.error || "Login failed");
 
       localStorage.setItem("authToken", data.token);
       localStorage.setItem("username", data.username || username);
       localStorage.setItem("userId", data.userId);
       localStorage.setItem("email", data.email);
-      setMessage("Login successful. Redirecting to dashboard...");
+
+      setMessage("Login successful! Loading dashboard…");
       setUsername("");
       setPassword("");
       onLoginSuccess?.(data.username || username, data.token);
     } catch (err) {
-      setError(err.message || "Unable to login");
+      setError(err.message || "Unable to login. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="card auth-card">
-      <h2>Login to Continue</h2>
-      <p className="card-subtitle">Only authenticated users can access the dashboard.</p>
+    <div className="login-root">
+      <div className="login-panel">
+        {/* Logo */}
+        <div className="login-logo-row">
+          <div className="login-logo-icon">✈️</div>
+          <div>
+            <div className="login-logo-text">AFN Project</div>
+            <div className="login-logo-sub">React + ASP.NET Core + .NET Aspire</div>
+          </div>
+        </div>
 
-      <form onSubmit={handleLogin} className="login-form">
-        <label>
-          Username
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter username"
-          />
-        </label>
+        <h1 className="login-heading">Welcome back</h1>
+        <p className="login-subheading">Sign in to access the secure dashboard</p>
 
-        <label>
-          Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter password"
-          />
-        </label>
+        <form onSubmit={handleLogin}>
+          <div className="form-field">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              autoComplete="username"
+              autoFocus
+              required
+            />
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Signing in..." : "Sign In"}
-        </button>
-      </form>
+          <div className="form-field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              autoComplete="current-password"
+              required
+            />
+          </div>
 
-      {message && <p className="success">{message}</p>}
-      {error && <p className="error">{error}</p>}
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? (
+              <><span className="spinner" />Signing in…</>
+            ) : (
+              "Sign in →"
+            )}
+          </button>
+        </form>
 
-      <div className="login-hint">
-        <p>Demo credentials:</p>
-        <p><strong>Username:</strong> krit</p>
-        <p><strong>Password:</strong> krit</p>
+        {message && <div className="login-feedback success">{message}</div>}
+        {error   && <div className="login-feedback error">{error}</div>}
+
+        {/* Demo hint */}
+        <div className="demo-hint">
+          <div className="demo-hint-title">Demo credentials</div>
+          <div className="demo-hint-row">Username <span>krit</span></div>
+          <div className="demo-hint-row">Password <span>krit</span></div>
+        </div>
       </div>
     </div>
   );

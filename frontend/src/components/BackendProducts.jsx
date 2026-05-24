@@ -6,102 +6,78 @@ function BackendProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [stats, setStats] = useState(null);
-  const token = localStorage.getItem("authToken");
+  const [productStats, setProductStats] = useState(null);
 
   useEffect(() => {
-    fetchProducts();
-    fetchDashboardStats();
+    fetchAll();
   }, []);
 
-  function fetchProducts() {
-    setLoading(true);
-    setError("");
-
-    const headers = {
+  function authHeaders() {
+    const token = localStorage.getItem("authToken");
+    return {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    fetch(`${API_BASE_URL}/products`, {
-      headers,
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to load products (${res.status})`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setProducts(data);
-      })
-      .catch((err) => {
-        setError(err.message || "Error fetching backend products");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
   }
 
-  function fetchDashboardStats() {
-    const headers = {
-      "Content-Type": "application/json",
-    };
+  async function fetchAll() {
+    setLoading(true);
+    setError("");
+    try {
+      const [prodRes, statsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/products`, { headers: authHeaders() }),
+        fetch(`${API_BASE_URL}/products/stats`, { headers: authHeaders() }),
+      ]);
 
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+      if (!prodRes.ok) throw new Error(`Products error (${prodRes.status})`);
+      const prodData = await prodRes.json();
+      setProducts(prodData);
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setProductStats(statsData);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to load products");
+    } finally {
+      setLoading(false);
     }
-
-    fetch(`${API_BASE_URL}/dashboard/stats`, {
-      headers,
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to load stats`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setStats(data);
-      })
-      .catch((err) => {
-        console.error("Error fetching stats:", err);
-      });
   }
 
   return (
-    <div className="card" id="backend-products">
-      <h2>Backend Products & Dashboard</h2>
-      <p className="card-subtitle">Secure data from your PostgreSQL database.</p>
-      <button onClick={() => { fetchProducts(); fetchDashboardStats(); }}>
-        Refresh
+    <div className="card">
+      <h2>Products from Database</h2>
+      <p className="card-subtitle">Live data from your PostgreSQL database via the API.</p>
+
+      <button className="btn-sm" onClick={fetchAll} disabled={loading}>
+        {loading ? "Loading…" : "↻ Refresh"}
       </button>
 
-      {stats && (
-        <div className="stats-grid">
-          <div className="stat-item">
-            <strong>Total Users:</strong> {stats.totalUsers}
+      {error && <div className="alert alert-error" style={{ marginTop: 12 }}>{error}</div>}
+
+      {productStats && (
+        <div className="product-stats">
+          <div className="stat-box">
+            <div className="sb-val">{productStats.totalCount}</div>
+            <div className="sb-label">Items</div>
           </div>
-          <div className="stat-item">
-            <strong>Active Users:</strong> {stats.activeUsers}
+          <div className="stat-box">
+            <div className="sb-val">${productStats.minPrice}</div>
+            <div className="sb-label">Min</div>
           </div>
-          <div className="stat-item">
-            <strong>Total Products:</strong> {stats.totalProducts}
+          <div className="stat-box">
+            <div className="sb-val">${productStats.maxPrice}</div>
+            <div className="sb-label">Max</div>
           </div>
         </div>
       )}
-
-      {loading && <p>Loading products...</p>}
-      {error && <p className="error">{error}</p>}
 
       {!loading && !error && (
         <ul className="product-list">
           {products.map((product) => (
             <li key={product.id}>
-              <strong>{product.name}</strong> — ${product.price}
+              <span className="p-name">{product.name}</span>
+              <span className="p-price">${product.price}</span>
             </li>
           ))}
         </ul>

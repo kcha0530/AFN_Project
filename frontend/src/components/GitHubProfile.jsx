@@ -8,38 +8,32 @@ function GitHubProfile() {
   useEffect(() => {
     fetch("https://api.github.com/users/kcha0530")
       .then((res) => {
-        if (!res.ok) {
-          throw new Error("Error fetching data");
-        }
+        if (!res.ok) throw new Error("Failed to fetch GitHub profile");
         return res.json();
       })
-      .then((data) => {
-        setUser(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Error fetching data");
-        setLoading(false);
-      });
+      .then((data) => { setUser(data); setLoading(false); })
+      .catch(() => { setError("Unable to load GitHub profile."); setLoading(false); });
   }, []);
-
-  if (loading) {
-    return <div className="card">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="card">{error}</div>;
-  }
 
   return (
     <div className="card">
       <h2>GitHub Profile</h2>
+      <p className="card-subtitle">Fetched live from the GitHub API.</p>
 
-      <img src={user.avatar_url} alt={user.name} width="120" />
+      {loading && <p style={{ color: "var(--slate-400)", fontSize: ".9rem" }}>Loading profile…</p>}
+      {error   && <div className="alert alert-error">{error}</div>}
 
-      <h3>{user.name}</h3>
-      <p>{user.bio}</p>
-      <p>Followers: {user.followers}</p>
+      {user && (
+        <div className="gh-profile">
+          <img className="gh-avatar" src={user.avatar_url} alt={user.login} />
+          <p className="gh-name">{user.name || user.login}</p>
+          {user.bio && <p className="gh-bio">{user.bio}</p>}
+          <div className="gh-meta">
+            <span className="gh-badge">👥 {user.followers} followers</span>
+            <span className="gh-badge">📦 {user.public_repos} repos</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

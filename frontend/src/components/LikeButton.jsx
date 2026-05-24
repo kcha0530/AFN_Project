@@ -5,21 +5,19 @@ function LikeButton() {
   const [count, setCount] = useState(0);
 
   function handleLike() {
-    if (liked) {
-      setCount(count - 1);
-    } else {
-      setCount(count + 1);
-    }
-
-    setLiked(!liked);
+    setLiked(prev => {
+      setCount(c => prev ? c - 1 : c + 1);
+      return !prev;
+    });
   }
 
   return (
     <div className="card">
       <h2>Like Button</h2>
-
-      <button onClick={handleLike} className="heart-btn">
-        {liked ? "❤️" : "🤍"} {count}
+      <p className="card-subtitle">Click to like or unlike. Count updates instantly.</p>
+      <button className={`like-btn ${liked ? "liked" : ""}`} onClick={handleLike}>
+        <span className="heart">{liked ? "❤️" : "🤍"}</span>
+        {count} {count === 1 ? "like" : "likes"}
       </button>
     </div>
   );

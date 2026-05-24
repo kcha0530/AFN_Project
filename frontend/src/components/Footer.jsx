@@ -1,7 +1,9 @@
 function Footer() {
   return (
     <footer className="site-footer">
-      <p>© 2026 All Rights Reserved</p>
+      <span>© 2026 AFN Project</span>
+      <span style={{ color: "var(--slate-300)" }}>·</span>
+      <span>React + ASP.NET Core + .NET Aspire</span>
     </footer>
   );
 }
