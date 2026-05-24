@@ -19,3 +19,12 @@ public record ApiHealthDto(
     DateTime Timestamp,
     string Database
 );
+
+public record ProductStatsDto(
+    int TotalCount,
+    decimal AveragePrice,
+    decimal MinPrice,
+    decimal MaxPrice
+);
+
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);

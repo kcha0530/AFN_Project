@@ -83,9 +83,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        policy.SetIsOriginAllowed(origin =>
+        {
+            var host = new Uri(origin).Host;
+            return host == "localhost" || host == "127.0.0.1";
+        })
+        .AllowAnyHeader()
+        .AllowAnyMethod();
     });
 });
 builder.Services.AddEndpointsApiExplorer();
@@ -234,7 +238,7 @@ app.MapPost("/auth/login", async (UserLogin login, ApplicationDbContext db) =>
 
     if (!user.IsActive)
     {
-        return Results.Unauthorized(new { error = "User account is inactive." });
+        return Results.Json(new { error = "User account is inactive." }, statusCode: StatusCodes.Status401Unauthorized);
     }
 
     var token = CreateJwtToken(user.Username, user.Id.ToString(), jwtSettings);
@@ -346,6 +350,94 @@ app.MapGet("/dashboard/stats", [Authorize] async (ApplicationDbContext db) =>
         ActiveUsers: activeUsers,
         LastUpdated: DateTime.UtcNow
     ));
+});
+
+// ============ PRODUCT SEARCH ENDPOINT ============
+
+app.MapGet("/products/search", async (string? q, ApplicationDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(q))
+        return Results.Json(Array.Empty<object>());
+
+    var results = await db.Products
+        .Where(p => p.Name.ToLower().Contains(q.ToLower()))
+        .ToListAsync();
+    return Results.Json(results);
+});
+
+// ============ PRODUCT STATS ENDPOINT ============
+
+app.MapGet("/products/stats", [Authorize] async (ApplicationDbContext db) =>
+{
+    var products = await db.Products.ToListAsync();
+    if (!products.Any())
+        return Results.Json(new ProductStatsDto(0, 0m, 0m, 0m));
+
+    return Results.Json(new ProductStatsDto(
+        TotalCount: products.Count,
+        AveragePrice: Math.Round(products.Average(p => p.Price), 2),
+        MinPrice: products.Min(p => p.Price),
+        MaxPrice: products.Max(p => p.Price)
+    ));
+});
+
+// ============ CURRENT USER ENDPOINT ============
+
+app.MapGet("/users/me", [Authorize] async (ClaimsPrincipal claims, ApplicationDbContext db) =>
+{
+    var username = claims.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                ?? claims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (username == null)
+        return Results.Unauthorized();
+
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
+    if (user == null)
+        return Results.NotFound(new { error = "User not found" });
+
+    return Results.Json(new UserDto(user.Id, user.Username, user.Email, user.FullName, user.CreatedAt));
+});
+
+// ============ CHANGE PASSWORD ENDPOINT ============
+
+app.MapPost("/auth/change-password", [Authorize] async (ChangePasswordRequest request, ClaimsPrincipal claims, ApplicationDbContext db) =>
+{
+    var username = claims.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                ?? claims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (username == null)
+        return Results.Unauthorized();
+
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
+    if (user == null)
+        return Results.NotFound(new { error = "User not found" });
+
+    if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+        return Results.BadRequest(new { error = "Current password is incorrect" });
+
+    if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 4)
+        return Results.BadRequest(new { error = "New password must be at least 4 characters" });
+
+    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+    user.UpdatedAt = DateTime.UtcNow;
+    db.Users.Update(user);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { message = "Password changed successfully" });
+});
+
+// ============ DEACTIVATE USER ENDPOINT ============
+
+app.MapDelete("/users/{id}", [Authorize] async (int id, ApplicationDbContext db) =>
+{
+    var user = await db.Users.FindAsync(id);
+    if (user == null)
+        return Results.NotFound(new { error = "User not found" });
+
+    user.IsActive = false;
+    user.UpdatedAt = DateTime.UtcNow;
+    db.Users.Update(user);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { message = "User deactivated successfully" });
 });
 
 // ============ TEST/SECURE ENDPOINTS ============

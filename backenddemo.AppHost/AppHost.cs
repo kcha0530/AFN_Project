@@ -18,8 +18,8 @@ var apiService = builder.AddProject<Projects.backenddemo_ApiService>("apiservice
     .WithReference(cache)
     .WaitFor(cache);
 
-// Add React Frontend (Vite app)
-var frontend = builder.AddNpmApp("frontend", "../my-app")
+// Add React Frontend (Vite app via AddViteApp)
+var frontend = builder.AddViteApp("frontend", "../frontend")
     .WithHttpEndpoint(env: "PORT")
     .WithExternalHttpEndpoints()
     .WithEnvironment("VITE_API_BASE_URL", apiService.GetEndpoint("http"));

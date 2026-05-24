@@ -5,6 +5,7 @@ import LikeButton from "./LikeButton.jsx";
 import GitHubProfile from "./GitHubProfile.jsx";
 import RandomJoke from "./RandomJoke.jsx";
 import BackendProducts from "./BackendProducts.jsx";
+import ProductSearch from "./ProductSearch.jsx";
 
 function Dashboard({ userName }) {
   return (
@@ -29,7 +30,8 @@ function Dashboard({ userName }) {
         <RandomJoke />
       </section>
 
-      <section className="grid">
+      <section className="grid two-column">
+        <ProductSearch />
         <BackendProducts />
       </section>
     </main>
