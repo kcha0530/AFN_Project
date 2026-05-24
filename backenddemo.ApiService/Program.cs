@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -87,7 +86,9 @@ builder.Services.AddCors(options =>
         policy.SetIsOriginAllowed(origin =>
         {
             var host = new Uri(origin).Host;
-            return host == "localhost" || host == "127.0.0.1";
+            return host == "localhost"
+                || host == "127.0.0.1"
+                || host.EndsWith(".localhost"); // Aspire dev proxy (e.g. frontend-backenddemo.dev.localhost)
         })
         .AllowAnyHeader()
         .AllowAnyMethod();
