@@ -71,7 +71,7 @@ function LoginPage({ onLoginSuccess }) {
         </div>
 
         <h1 className="login-heading">Welcome back</h1>
-        <p className="login-subheading">Sign in to access the secure dashboard</p>
+        <p className="login-subheading">Sign in to access the dashboard</p>
 
         <form onSubmit={handleLogin}>
           <div className="form-field">
@@ -114,11 +114,11 @@ function LoginPage({ onLoginSuccess }) {
         {error   && <div className="login-feedback error">{error}</div>}
 
         {/* Demo hint */}
-        <div className="demo-hint">
-          <div className="demo-hint-title">Demo credentials</div>
+        {/* <div className="demo-hint"> */}
+          {/* <div className="demo-hint-title">Demo credentials</div>
           <div className="demo-hint-row">Username <span>krit</span></div>
-          <div className="demo-hint-row">Password <span>krit</span></div>
-        </div>
+          <div className="demo-hint-row">Password <span>krit</span></div> */}
+        {/* </div> */}
       </div>
     </div>
   );
