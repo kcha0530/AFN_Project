@@ -10,14 +10,13 @@ public class ApplicationDbContext : DbContext
     {
     }
 
-    public DbSet<Product> Products { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Flight> Flights { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configure User table
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -28,11 +27,18 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.Email).IsUnique();
         });
 
-        // Configure Product table
-        modelBuilder.Entity<Product>(entity =>
+        modelBuilder.Entity<Flight>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.AirlineName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.FlightNumber).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.FromCity).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ToCity).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Price).HasColumnType("numeric(10,2)");
+            entity.Property(e => e.Currency).HasMaxLength(3);
+            entity.Property(e => e.Status).HasMaxLength(20);
+            entity.Property(e => e.CabinClass).HasMaxLength(20);
+            entity.HasIndex(e => e.FlightNumber).IsUnique();
         });
     }
 }

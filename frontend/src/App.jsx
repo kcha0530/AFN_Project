@@ -34,11 +34,11 @@ function App() {
       <Header isLoggedIn={isAuthenticated} onLogout={handleLogout} userName={userName} />
 
       <section className="hero">
-        <p className="eyebrow">Secure dashboard</p>
-        <h1>Hello, {userName}! 👋</h1>
+        <p className="eyebrow">Flight Management System</p>
+        <h1>Hello, {userName}!</h1>
         <p className="lead">
-          You are authenticated. Explore interactive React components and live backend data
-          powered by ASP.NET Core + PostgreSQL via .NET Aspire.
+          Full CRUD flight management — paginated, filterable, sortable.
+          Powered by ASP.NET Core + PostgreSQL via .NET Aspire.
         </p>
         {statusMessage && <p className="status-message">{statusMessage}</p>}
       </section>

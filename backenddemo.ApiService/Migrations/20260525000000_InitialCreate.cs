@@ -13,23 +13,8 @@ namespace backenddemo.ApiService.Migrations
     [Migration("20260525000000_InitialCreate")]
     public partial class InitialCreate : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "Products",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    Price = table.Column<decimal>(type: "numeric", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Products", x => x.Id);
-                });
-
             migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
@@ -49,6 +34,38 @@ namespace backenddemo.ApiService.Migrations
                     table.PrimaryKey("PK_Users", x => x.Id);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Flights",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    AirlineName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    FlightNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    AircraftType = table.Column<string>(type: "text", nullable: true),
+                    FromCity = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    ToCity = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    DepartureTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ArrivalTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DurationMinutes = table.Column<int>(type: "integer", nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(10,2)", nullable: false),
+                    Currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
+                    AvailableSeats = table.Column<int>(type: "integer", nullable: false),
+                    TotalSeats = table.Column<int>(type: "integer", nullable: false),
+                    Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Terminal = table.Column<string>(type: "text", nullable: true),
+                    Gate = table.Column<string>(type: "text", nullable: true),
+                    IsRefundable = table.Column<bool>(type: "boolean", nullable: false),
+                    CabinClass = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Flights", x => x.Id);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Users_Email",
                 table: "Users",
@@ -60,16 +77,18 @@ namespace backenddemo.ApiService.Migrations
                 table: "Users",
                 column: "Username",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Flights_FlightNumber",
+                table: "Flights",
+                column: "FlightNumber",
+                unique: true);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Products");
-
-            migrationBuilder.DropTable(
-                name: "Users");
+            migrationBuilder.DropTable(name: "Flights");
+            migrationBuilder.DropTable(name: "Users");
         }
     }
 }

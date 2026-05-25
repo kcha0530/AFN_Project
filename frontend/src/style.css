@@ -899,6 +899,130 @@ label {
   margin: 8px 0 12px;
 }
 
+/* ─── Stat Card (orange) ─────────────────────────────────────── */
+.stat-card.orange { border-top-color: #f97316; }
+.stat-card.orange .stat-value { color: #ea580c; }
+
+/* ─── Flight Filters ─────────────────────────────────────────── */
+.flight-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.flight-filters input,
+.flight-filters select {
+  flex: 1 1 140px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  background: var(--slate-50);
+  color: var(--slate-800);
+  outline: none;
+  transition: border-color .15s;
+}
+.flight-filters input:focus,
+.flight-filters select:focus { border-color: var(--blue-500); }
+
+/* ─── Flight Table ───────────────────────────────────────────── */
+.flight-table-wrap { overflow-x: auto; margin-top: 12px; }
+
+.flight-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.855rem;
+}
+.flight-table th {
+  background: var(--slate-50);
+  color: var(--slate-500);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--slate-200);
+  white-space: nowrap;
+  text-align: left;
+}
+.flight-table th.sortable { cursor: pointer; user-select: none; }
+.flight-table th.sortable:hover { color: var(--blue-600); }
+.flight-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--slate-100);
+  color: var(--slate-700);
+  white-space: nowrap;
+}
+.flight-table tr:hover td { background: var(--blue-50); }
+.flight-table .mono { font-family: 'Courier New', monospace; font-weight: 700; color: var(--slate-900); }
+
+.flight-price { font-weight: 700; color: var(--green-600); }
+.seats-avail  { color: var(--green-600); font-weight: 600; }
+.seats-full   { color: var(--red-500);   font-weight: 600; }
+.flight-loading { text-align: center; color: var(--slate-400); padding: 24px; }
+
+/* ─── Flight Status Badges ───────────────────────────────────── */
+.flight-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.status-scheduled { background: #dbeafe; color: #1d4ed8; }
+.status-departed  { background: #fef9c3; color: #a16207; }
+.status-arrived   { background: #dcfce7; color: #15803d; }
+.status-cancelled { background: #fee2e2; color: #b91c1c; }
+.status-delayed   { background: #ffedd5; color: #c2410c; }
+
+/* ─── Pagination ─────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 0.875rem;
+  color: var(--slate-500);
+}
+.pagination button {
+  padding: 6px 16px;
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  background: white;
+  color: var(--blue-600);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.pagination button:hover:not(:disabled) { background: var(--blue-50); border-color: var(--blue-300); }
+.pagination button:disabled { opacity: .4; cursor: default; }
+
+/* ─── Flight Search Results ──────────────────────────────────── */
+.flight-search-results {
+  list-style: none;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.flight-search-results li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fsr-main { display: flex; align-items: center; gap: 12px; }
+.fsr-num     { font-family: monospace; font-weight: 700; color: var(--slate-900); }
+.fsr-airline { font-weight: 600; color: var(--blue-700); }
+.fsr-route   { color: var(--slate-500); font-size: 0.875rem; }
+.fsr-meta    { display: flex; align-items: center; gap: 10px; font-size: 0.855rem; }
+
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .app { padding: 16px 14px 36px; }
