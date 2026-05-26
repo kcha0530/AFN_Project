@@ -1,7 +1,10 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// SQL Server database
-var database = builder.AddSqlServer("sqlserver")
+// Fixed SA password so mssql extension can connect with known credentials
+var sqlPassword = builder.AddParameter("sql-password", "YourStrong!Pass123", secret: true);
+
+// SQL Server on fixed host port 1434 (avoids conflict with any local SQL Server on 1433)
+var database = builder.AddSqlServer("sqlserver", password: sqlPassword, port: 1434)
     .WithLifetime(ContainerLifetime.Persistent)
     .AddDatabase("demodb");
 

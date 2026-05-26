@@ -4,11 +4,11 @@
 -- ============================================================
 
 -- ── CONNECTION (VS Code mssql) ────────────────────────────
--- Server:   localhost,1433
+-- Server:   localhost,1434
 -- Database: demodb
 -- User:     sa
--- Password: yourStrong(!)Password
--- Encrypt:  Trust Server Certificate
+-- Password: YourStrong!Pass123
+-- Encrypt:  Trust Server Certificate (checked)
 
 -- ============================================================
 --  FLIGHTS
