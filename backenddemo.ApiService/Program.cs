@@ -21,7 +21,7 @@ builder.Configuration.AddEnvironmentVariables();
 // ── Database ─────────────────────────────────────────────────────────────────
 var dbConnectionString = builder.Configuration.GetConnectionString("demodb") ?? string.Empty;
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(dbConnectionString));
+    options.UseSqlServer(dbConnectionString));
 
 // ── JWT ───────────────────────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings(
@@ -56,9 +56,11 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
-// ── Flight Architecture (Repository → Service) ────────────────────────────────
+// ── Repository / Service layer ────────────────────────────────────────────────
 builder.Services.AddScoped<IFlightRepository, FlightRepository>();
 builder.Services.AddScoped<IFlightService, FlightService>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IBookingService, BookingService>();
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 builder.Services.AddRateLimiter(options =>
@@ -205,7 +207,7 @@ app.MapGet("/health", async (ApplicationDbContext db) =>
 {
     var userCount   = await db.Users.CountAsync();
     var flightCount = await db.Flights.CountAsync(f => !f.IsDeleted);
-    return Results.Json(new ApiHealthDto("Healthy", "1.0.0", DateTime.UtcNow, "PostgreSQL"));
+    return Results.Json(new ApiHealthDto("Healthy", "1.0.0", DateTime.UtcNow, "SQL Server"));
 });
 
 // Auth

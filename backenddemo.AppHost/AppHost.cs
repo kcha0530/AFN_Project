@@ -1,14 +1,14 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Add PostgreSQL database
-var database = builder.AddPostgres("postgres")
-    .WithPgAdmin()
+// SQL Server database
+var database = builder.AddSqlServer("sqlserver")
+    .WithLifetime(ContainerLifetime.Persistent)
     .AddDatabase("demodb");
 
-// Add Redis cache
+// Redis cache
 var cache = builder.AddRedis("cache");
 
-// Add ASP.NET Core API Service with PostgreSQL
+// ASP.NET Core API Service
 var apiService = builder.AddProject<Projects.backenddemo_ApiService>("apiservice")
     .WithHttpEndpoint()
     .WithExternalHttpEndpoints()
@@ -18,13 +18,12 @@ var apiService = builder.AddProject<Projects.backenddemo_ApiService>("apiservice
     .WithReference(cache)
     .WaitFor(cache);
 
-// Add React Frontend (Vite app via AddViteApp)
+// React Frontend (Vite)
 var frontend = builder.AddViteApp("frontend", "../frontend")
     .WithHttpEndpoint(env: "PORT")
     .WithExternalHttpEndpoints()
     .WithEnvironment("VITE_API_BASE_URL", apiService.GetEndpoint("http"));
 
-// Wait for frontend to be ready
 frontend.WaitFor(apiService);
 
 builder.Build().Run();

@@ -1,13 +1,13 @@
-function Header({ isLoggedIn, onLogout, userName }) {
-  const initials = userName ? userName.slice(0, 2).toUpperCase() : "?";
+function Header({ isLoggedIn, onLogout, userName, onLoginClick }) {
+  const initials = userName ? userName.slice(0, 2).toUpperCase() : "";
 
   return (
     <header className="site-header">
       <div className="header-brand">
-        <div className="header-logo-icon">✈️</div>
+        <span className="header-logo-icon">✈</span>
         <div>
-          <p className="logo">AFN Project</p>
-          <p className="logo-tag">React · ASP.NET Core · .NET Aspire</p>
+          <span className="logo">SkyBook</span>
+          <span className="logo-tag">Flight Booking</span>
         </div>
       </div>
 
@@ -23,7 +23,9 @@ function Header({ isLoggedIn, onLogout, userName }) {
             </button>
           </>
         ) : (
-          <a href="#login" className="btn-nav-link">Sign in</a>
+          <button type="button" className="btn-signin" onClick={onLoginClick}>
+            Sign in
+          </button>
         )}
       </nav>
     </header>

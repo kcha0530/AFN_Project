@@ -26,4 +26,6 @@ public class Flight
 
     public void RecalculateDuration() =>
         DurationMinutes = (int)(ArrivalTime - DepartureTime).TotalMinutes;
+
+    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }

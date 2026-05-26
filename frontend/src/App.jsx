@@ -1,18 +1,18 @@
 import { useState } from "react";
 import Header from "./components/Header.jsx";
 import Footer from "./components/Footer.jsx";
-import LoginPage from "./components/LoginPage.jsx";
-import Dashboard from "./components/Dashboard.jsx";
+import HomePage from "./components/HomePage.jsx";
+import LoginModal from "./components/LoginModal.jsx";
 
 function App() {
   const [userName, setUserName] = useState(localStorage.getItem("username") || "");
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("authToken"));
-  const [statusMessage, setStatusMessage] = useState("");
+  const [showLogin, setShowLogin] = useState(false);
 
   function handleLoginSuccess(username) {
     setUserName(username);
     setIsAuthenticated(true);
-    setStatusMessage("");
+    setShowLogin(false);
   }
 
   function handleLogout() {
@@ -22,29 +22,27 @@ function App() {
     localStorage.removeItem("email");
     setIsAuthenticated(false);
     setUserName("");
-    setStatusMessage("You have been signed out successfully.");
-  }
-
-  if (!isAuthenticated) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
     <div className="app">
-      <Header isLoggedIn={isAuthenticated} onLogout={handleLogout} userName={userName} />
+      <Header
+        isLoggedIn={isAuthenticated}
+        onLogout={handleLogout}
+        userName={userName}
+        onLoginClick={() => setShowLogin(true)}
+      />
 
-      <section className="hero">
-        <p className="eyebrow">Flight Management System</p>
-        <h1>Hello, {userName}!</h1>
-        <p className="lead">
-          Full CRUD flight management — paginated, filterable, sortable.
-          Powered by ASP.NET Core + PostgreSQL via .NET Aspire.
-        </p>
-        {statusMessage && <p className="status-message">{statusMessage}</p>}
-      </section>
+      <HomePage isAuthenticated={isAuthenticated} userName={userName} />
 
-      <Dashboard userName={userName} />
       <Footer />
+
+      {showLogin && (
+        <LoginModal
+          onLoginSuccess={handleLoginSuccess}
+          onClose={() => setShowLogin(false)}
+        />
+      )}
     </div>
   );
 }
